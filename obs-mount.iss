@@ -45,8 +45,9 @@ Filename: "msiexec.exe"; \
 [UninstallDelete]
 Type: files; Name: "{userstartup}\OBS Drive Mount (*).lnk"
 Type: files; Name: "{app}\obs-config-*.ini"
-Type: files; Name: "{app}\rclone-*.conf"
-Type: files; Name: "{localappdata}\rclone\mount-*.log"
+Type: files; Name: "{app}clone-*.conf"
+Type: files; Name: "{localappdata}clone\mount-*.log"
+Type: dirifempty; Name: "{localappdata}clone"
 
 
 ;--------------------------------------------------------
@@ -56,11 +57,13 @@ Type: files; Name: "{localappdata}\rclone\mount-*.log"
 var
   PgBucket, PgCred: TInputQueryWizardPage;
   CurrentDriveLetter: string; // To store the drive letter for use in ssDone or ssPostInstall
+  PermissionsLabel: TLabel;
+  PermissionsRadioRW, PermissionsRadioRO: TRadioButton;
 
 // Function to create a shortcut (from Inno Setup examples, slightly adapted)
 procedure CreateShortcutInStartup(const LinkName, TargetPath, Parameters, WorkingDir, IconPath: String; IconIndex, ShowCmd: Integer);
 var
-  ShellLink: IShellLinkW; // Changed IShellLink to IShellLinkW
+  ShellLink: OleVariant; // Changed IShellLink to IShellLinkW
   PFile: IPersistFile;
   WPath: WideString;    // For PFile.Save
 begin
@@ -123,6 +126,32 @@ begin
     Add('Secret Key:', True);      { second param = PasswordChar }
     Add('Drive letter (e.g., Q):', False); // Ensure user enters a single letter
     Values[2] := 'P';              { pre-fill drive letter }
+
+    // Add Permissions Radio Buttons
+    PermissionsLabel := TLabel.Create(PgCred);
+    PermissionsLabel.Caption := 'Permissions:';
+    PermissionsLabel.Parent := PgCred.Surface;
+    // Position of the label will be relative to the last input field.
+    // We might need to adjust Y position based on actual layout.
+    // Let's assume InputObjects[2] is the 'Drive letter' input.
+    PermissionsLabel.Top := PgCred.InputObjects[2].Top + PgCred.InputObjects[2].Height + ScaleY(12);
+    PermissionsLabel.Left := PgCred.InputObjects[2].Left;
+
+    PermissionsRadioRW := TRadioButton.Create(PgCred);
+    PermissionsRadioRW.Parent := PgCred.Surface;
+    PermissionsRadioRW.Caption := 'Read-Write (Default)';
+    PermissionsRadioRW.Checked := True; // Default
+    PermissionsRadioRW.Top := PermissionsLabel.Top + PermissionsLabel.Height + ScaleY(4);
+    PermissionsRadioRW.Left := PermissionsLabel.Left + ScaleX(10); // Indent slightly
+
+    PermissionsRadioRO := TRadioButton.Create(PgCred);
+    PermissionsRadioRO.Parent := PgCred.Surface;
+    PermissionsRadioRO.Caption := 'Read-Only';
+    PermissionsRadioRO.Top := PermissionsRadioRW.Top; // Align with RW button's top
+    PermissionsRadioRO.Left := PermissionsRadioRW.Left + PermissionsRadioRW.Width + ScaleX(10); // Position next to RW
+
+    // Group them - this is usually done by setting RadioGroup property or ensuring they are added to the same parent
+    // Inno Setup handles this automatically if they share the same parent and are TRadioButton
   end;
 end;
 
@@ -148,7 +177,7 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   IniPath, RcloneCfgPath: String;
-  DriveLetter, BucketName, Region, Endpoint, Ak, Sk, RcPortStr: String;
+  DriveLetter, BucketName, Region, Endpoint, Ak, Sk, RcPortStr, PermissionsSetting: String;
   RcPort: Integer;
   VbsPath, LnkBasePath, LnkName: String;
   ErrorCode: Integer;
@@ -180,18 +209,24 @@ begin
     RcPort := GenerateRcPort(DriveLetter);
     RcPortStr := IntToStr(RcPort);
 
+    if PermissionsRadioRW.Checked then
+      PermissionsSetting := 'readwrite'
+    else
+      PermissionsSetting := 'readonly';
+
     Log(Fmt('Saving configuration for Profile %s to %s', [DriveLetter, IniPath]));
-    Log(Fmt('Bucket: %s, Region: %s, Endpoint: %s, Drive: %s, RC Port: %s', [BucketName, Region, Endpoint, DriveLetter, RcPortStr]));
+    Log(Fmt('Bucket: %s, Region: %s, Endpoint: %s, Drive: %s, RC Port: %s, Permissions: %s', [BucketName, Region, Endpoint, DriveLetter, RcPortStr, PermissionsSetting]));
 
     SaveStringToFile(IniPath,
       '; OBS Configuration for Drive ' + DriveLetter + #13#10 +
-      'bucket='   + BucketName + #13#10 +
-      'region='   + Region + #13#10 +
-      'endpoint=' + Endpoint + #13#10 +
-      'ak='       + Ak + #13#10 +
-      'sk='       + Sk + #13#10 +
-      'drive='    + DriveLetter + #13#10 +
-      'rc_port='  + RcPortStr + #13#10,
+      'bucket='     + BucketName + #13#10 +
+      'region='     + Region + #13#10 +
+      'endpoint='   + Endpoint + #13#10 +
+      'ak='         + Ak + #13#10 +
+      'sk='         + Sk + #13#10 +
+      'drive='      + DriveLetter + #13#10 +
+      'rc_port='    + RcPortStr + #13#10 +
+      'permissions='+ PermissionsSetting + #13#10,
       False);
 
     Log(Fmt('Saving rclone config for Profile %s to %s', [DriveLetter, RcloneCfgPath]));

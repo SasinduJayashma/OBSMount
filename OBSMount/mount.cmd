@@ -52,6 +52,7 @@ set "AK="
 set "SK="
 set "DRIVE="
 set "RC_PORT="
+set "PERMISSIONS="
 
 rem === Read values from the profile-specific INI file ===
 if not exist "%OBS_CONFIG_FILE%" (
@@ -66,6 +67,7 @@ for /f "usebackq tokens=1,* delims==" %%A in (`findstr /r "^[a-z]" "%OBS_CONFIG_
   if "%%A"=="sk"       set SK=%%B
   if "%%A"=="drive"    set DRIVE=%%B
   if "%%A"=="rc_port"  set RC_PORT=%%B
+  if "%%A"=="permissions" set PERMISSIONS=%%B
 )
 
 rem === Validate essential variables were read ===
@@ -82,6 +84,7 @@ echo Using specific rclone config: %RCLONE_PROFILE_CONFIG_PATH%
 echo Using OBS config: %OBS_CONFIG_FILE%
 echo Mounting to Drive: %DRIVE%
 echo Using RC Port: %RC_PORT%
+echo Permissions: %PERMISSIONS%
 echo Logging to: %RCLONE_LOG_FILE%
 echo.
 
@@ -99,8 +102,15 @@ if not exist "%LOCALAPPDATA%\rclone\" (
 )
 echo.
 
+set "RCLONE_EXTRA_ARGS="
+if /I "%PERMISSIONS%"=="readonly" (
+    set "RCLONE_EXTRA_ARGS=--read-only"
+    echo Applying read-only permissions.
+)
+
 "%~dp0\rclone.exe" mount huaweiOBS:%BUCKET% %DRIVE%: ^
   --config "%RCLONE_PROFILE_CONFIG_PATH%" ^
+  %RCLONE_EXTRA_ARGS% ^
   --s3-provider Other ^
   --s3-endpoint "%ENDPOINT%" ^
   --s3-access-key-id "%AK%" ^
