@@ -1,0 +1,68 @@
+OBS Drive Mount  –  Next Steps
+======================================
+
+✓ Installation Directory
+    The OBS Drive Mount was installed in:
+    C:\Program Files (x86)\OBSDrive\
+
+✓ Managing the OBS Drive Mount
+    • Starts Automatically: The OBS Drive is configured to start automatically
+      when you log into Windows. It runs silently in the background using
+      the "OBS Drive Mount" shortcut in your Startup folder, which launches
+      mount.cmd via runhidden.vbs.
+
+    • Stopping/Unmounting the Drive: To stop the OBS Drive and unmount it,
+      run the "unmount.cmd" script located in the installation directory:
+      C:\Program Files (x86)\OBSDrive\unmount.cmd
+      (You can create a desktop shortcut to unmount.cmd for easier access).
+
+    • Manually Restarting the Mount: If you have unmounted the drive and wish
+      to restart it without signing out and back in, you can run the
+      "runhidden.vbs" script from the installation directory:
+      C:\Program Files (x86)\OBSDrive\runhidden.vbs
+
+✓ Changing Drive Letter, Bucket, Keys, or Other Settings
+    Configuration settings are stored in "obs-config.ini". To change them:
+
+    1. Open the configuration file in a text editor (like Notepad).
+       You may need Administrator privileges to save changes to this file.
+       File path: C:\Program Files (x86)\OBSDrive\obs-config.ini
+
+    2. Edit the desired lines, for example:
+       drive=
+       bucket=
+       ak=
+       sk=
+       endpoint=
+       region=
+
+    3. Save the "obs-config.ini" file.
+
+    4. Apply the new settings:
+       a. First, stop the currently running mount by executing:
+          C:\Program Files (x86)\OBSDrive\unmount.cmd
+       b. The new settings will be used the next time the mount starts.
+          This happens automatically when you sign out of Windows and then
+          sign back in.
+       c. Alternatively, to apply changes immediately after unmounting,
+          manually restart the mount by running:
+          C:\Program Files (x86)\OBSDrive\runhidden.vbs
+
+✓ Log Files
+    • Runtime Log (for mount activity, errors, etc.):
+      %LOCALAPPDATA%\rclone\mount.log
+      (You can paste this path into File Explorer's address bar)
+
+    • Setup Log (created by the installer):
+      %LOCALAPPDATA%\rclone\mount_setup.log
+      (This path might vary depending on how the setup was launched or if
+      logging was enabled for the installer. If not found, check Inno Setup's
+      default log locations like the {tmp} folder during installation if needed.)
+
+✓ How to Uninstall
+    • Go to Windows Settings ► Apps ► find “OBS Drive Mount” ► Uninstall.
+    • Alternatively, run “Uninstall OBS Drive” from the Start Menu group
+      (if created by the installer).
+
+Copyright © 2025 Huawei Lanka Technologies & Sasindu Jayashma
+Released under the MIT License.
