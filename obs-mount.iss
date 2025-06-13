@@ -22,6 +22,7 @@ ShowComponentSizes=yes
 [Files]
 Source: "OBSMount\winfsp-2.0.23075.msi"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "OBSMount\rclone.exe";          DestDir: "{app}"
+Source: "OBSMount\CreateShortcut.exe"; DestDir: "{app}"
 Source: "OBSMount\mount.cmd";           DestDir: "{app}"
 Source: "OBSMount\unmount.cmd";         DestDir: "{app}"
 Source: "OBSMount\runhidden.vbs";       DestDir: "{app}"
@@ -45,6 +46,7 @@ Filename: "msiexec.exe"; \
 [UninstallDelete]
 Type: files; Name: "{userstartup}\OBS Drive Mount (*).lnk"
 Type: files; Name: "{app}\obs-config-*.ini"
+Type: files; Name: "{app}\CreateShortcut.exe"
 Type: files; Name: "{app}clone-*.conf"
 Type: files; Name: "{localappdata}clone\mount-*.log"
 Type: dirifempty; Name: "{localappdata}clone"
@@ -59,45 +61,6 @@ var
   CurrentDriveLetter: string; // To store the drive letter for use in ssDone or ssPostInstall
   PermissionsLabel: TLabel;
   PermissionsRadioRW, PermissionsRadioRO: TRadioButton;
-
-// Function to create a shortcut (from Inno Setup examples, slightly adapted)
-procedure CreateShortcutInStartup(const LinkName, TargetPath, Parameters, WorkingDir, IconPath: String; IconIndex, ShowCmd: Integer);
-var
-  ShellLink: OleVariant; // Changed IShellLink to IShellLinkW
-  PFile: IPersistFile;
-  WPath: WideString;    // For PFile.Save
-begin
-  ShellLink := CreateShellLink; // CreateShellLink returns IShellLinkW
-  if ShellLink = nil then
-  begin
-    Log(Fmt('Failed to create ShellLink object for: %s', [LinkName]));
-    Exit;
-  end;
-
-  try
-    ShellLink.SetPath(TargetPath);
-    ShellLink.SetArguments(Parameters);
-    ShellLink.SetWorkingDirectory(WorkingDir);
-    if IconPath <> '' then
-      ShellLink.SetIconLocation(IconPath, IconIndex);
-    // The SetShowCmd method IS available on IShellLinkW. My comment above was overly cautious.
-    ShellLink.SetShowCmd(ShowCmd);
-
-
-    PFile := ShellLink as IPersistFile; // QueryInterface for IPersistFile
-    if PFile = nil then
-    begin
-      Log(Fmt('Failed to get IPersistFile interface for: %s', [LinkName]));
-      Exit;
-    end;
-
-    WPath := LinkName; // LinkName is already a string, conversion to WideString is implicit if needed by PFile.Save
-    PFile.Save(WPath, False); // Save the shortcut
-    Log(Fmt('Successfully created shortcut: %s -> "%s" (Params: "%s")', [LinkName, TargetPath, Parameters]));
-  except
-    Log(Fmt('Exception creating shortcut "%s": %s', [LinkName, GetExceptionMessage]));
-  end;
-end;
 
 procedure InitializeWizard;
 begin
@@ -246,7 +209,16 @@ begin
     LnkName := LnkBasePath + DriveLetter + ').lnk'; // e.g., OBS Drive Mount (Q).lnk
     
     Log(Fmt('Creating startup shortcut: %s for drive %s', [LnkName, DriveLetter]));
-    CreateShortcutInStartup(LnkName, VbsPath, DriveLetter, ExpandConstant('{app}'), '', 0, SW_SHOWNORMAL);
+    Exec(ExpandConstant('{app}\CreateShortcut.exe'), Fmt('"%s" "%s" "%s" "%s"', [LnkName, VbsPath, DriveLetter, ExpandConstant('{app}')]), '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    if ErrorCode <> 0 then
+    begin
+      Log(Fmt('Error creating shortcut via CreateShortcut.exe for drive %s. Error code: %d', [DriveLetter, ErrorCode]));
+      MsgBox(Fmt('Failed to create startup shortcut for drive %s. Please check logs for details.', [DriveLetter]), mbError, MB_OK);
+    end
+    else
+    begin
+      Log(Fmt('Successfully requested shortcut creation for drive %s via CreateShortcut.exe.', [DriveLetter]));
+    end;
 
     // Optionally, run the newly configured mount instance immediately
     // This replaces the static [Run] entry for runhidden.vbs
