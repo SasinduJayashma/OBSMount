@@ -96,9 +96,9 @@ begin
     PermissionsLabel.Parent := PgCred.Surface;
     // Position of the label will be relative to the last input field.
     // We might need to adjust Y position based on actual layout.
-    // Let's assume InputObjects[2] is the 'Drive letter' input.
-    PermissionsLabel.Top := PgCred.InputObjects[2].Top + PgCred.InputObjects[2].Height + ScaleY(12);
-    PermissionsLabel.Left := PgCred.InputObjects[2].Left;
+    // Edits[2] corresponds to the third input field ('Drive letter') on PgCred.
+    PermissionsLabel.Top := PgCred.Edits[2].Top + PgCred.Edits[2].Height + ScaleY(12);
+    PermissionsLabel.Left := PgCred.Edits[2].Left;
 
     PermissionsRadioRW := TRadioButton.Create(PgCred);
     PermissionsRadioRW.Parent := PgCred.Surface;
