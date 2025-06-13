@@ -160,10 +160,10 @@ begin
     Endpoint := Trim(PgBucket.Values[2]);
     Ak := Trim(PgCred.Values[0]);
     Sk := Trim(PgCred.Values[1]);
+    // Get and process DriveLetter from wizard input
     DriveLetter := Trim(PgCred.Values[2]); // Trim first
 
     // Manual uppercase for the first char if it's a lowercase letter
-    // and if DriveLetter has content
     if Length(DriveLetter) = 1 then
     begin
       if (DriveLetter[1] >= 'a') and (DriveLetter[1] <= 'z') then
