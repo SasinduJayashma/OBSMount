@@ -122,15 +122,23 @@ end;
 // This is a simple example, consider a more robust port management for production
 function GenerateRcPort(DriveLetter: String): Integer;
 var
-  UpperDriveLetter: String;
+  DriveLetterChar: Char;
 begin
   if Length(DriveLetter) = 1 then
   begin
-    UpperDriveLetter := UpCaseString(DriveLetter);
-    // Base port 5572. Add offset based on drive letter (A=0, B=1, etc.)
-    // This simple scheme might have collisions if other apps use these ports.
-    Result := 5572 + (Ord(UpperDriveLetter[1]) - Ord('A'));
-    if (Result < 1024) or (Result > 65535) then // Basic port range check
+    DriveLetterChar := DriveLetter[1];
+    if (DriveLetterChar >= 'a') and (DriveLetterChar <= 'z') then
+    begin
+      DriveLetterChar := Chr(Ord(DriveLetterChar) - 32); // Convert to uppercase
+    end;
+    // Now DriveLetterChar is guaranteed to be uppercase if it was a letter
+    // (or unchanged if it wasn't a lowercase letter).
+    // The Ord() calculation assumes DriveLetterChar is an uppercase letter.
+    // Additional validation might be needed if DriveLetterChar could be non-alphabetic
+    // and still pass the Length(DriveLetter) = 1 check.
+    // However, the main DriveLetter validation happens in CurStepChanged.
+    Result := 5572 + (Ord(DriveLetterChar) - Ord('A'));
+    if (Result < 1024) or (Result > 65535) or (Ord(DriveLetterChar) < Ord('A')) or (Ord(DriveLetterChar) > Ord('Z')) then // Basic port range check & ensure it's a letter
       Result := 5600 + Random(100); // Fallback to a random port in a small range
   end
   else
@@ -152,9 +160,20 @@ begin
     Endpoint := Trim(PgBucket.Values[2]);
     Ak := Trim(PgCred.Values[0]);
     Sk := Trim(PgCred.Values[1]);
-    DriveLetter := Trim(UpCaseString(PgCred.Values[2])); // Store and use uppercase drive letter
+    DriveLetter := Trim(PgCred.Values[2]); // Trim first
+
+    // Manual uppercase for the first char if it's a lowercase letter
+    // and if DriveLetter has content
+    if Length(DriveLetter) = 1 then
+    begin
+      if (DriveLetter[1] >= 'a') and (DriveLetter[1] <= 'z') then
+      begin
+        DriveLetter[1] := Chr(Ord(DriveLetter[1]) - 32); // Modify char directly
+      end;
+    end;
 
     // Validate drive letter is a single alphabet character
+    // This validation now uses the potentially modified DriveLetter.
     if (Length(DriveLetter) <> 1) or not (DriveLetter[1] in ['A'..'Z']) then
     begin
       MsgBox('Invalid drive letter: ' + DriveLetter + #13#10 + 'Please use a single alphabet character (A-Z).', mbError, MB_OK);
@@ -258,17 +277,31 @@ begin
   // Credentials page
   else if CurPageID = PgCred.ID then
   begin
-    DriveInput := Trim(UpCaseString(PgCred.Values[2]));
+    DriveInput := Trim(PgCred.Values[2]); // Trim first
+
+    // Manual uppercase for the first char if it's a lowercase letter
+    // and if DriveInput has content and is a single character
+    if Length(DriveInput) = 1 then
+    begin
+      if (DriveInput[1] >= 'a') and (DriveInput[1] <= 'z') then
+      begin
+        DriveInput[1] := Chr(Ord(DriveInput[1]) - 32); // Modify char directly
+      end;
+    end;
+
+    // The rest of the validation logic using DriveInput follows:
     if (Trim(PgCred.Values[0]) = '') or  // AK
         (Trim(PgCred.Values[1]) = '') or  // SK
-        (DriveInput = '') then           // Drive
+        (DriveInput = '') then           // Drive (already trimmed)
     begin
       MsgBox('Access Key, Secret Key and Drive Letter cannot be empty.',
               mbError, MB_OK);
       Result := False;
     end
-    else if (Length(DriveInput) <> 1) or not (DriveInput[1] in ['A'..'Z']) then
+    // Check DriveInput length and if it's an uppercase letter
+    else if (Length(DriveInput) <> 1) or not ((DriveInput[1] >= 'A') and (DriveInput[1] <= 'Z')) then
     begin
+        // Use PgCred.Values[2] for the message to show the original user input if it was invalid
         MsgBox('Invalid Drive Letter: "' + PgCred.Values[2] + '". Please enter a single alphabet character (e.g., Q).', mbError, MB_OK);
         Result := False;
     end;
