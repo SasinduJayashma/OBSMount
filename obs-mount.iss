@@ -174,7 +174,7 @@ begin
 
     // Validate drive letter is a single alphabet character
     // This validation now uses the potentially modified DriveLetter.
-    if (Length(DriveLetter) <> 1) or not (DriveLetter[1] in ['A'..'Z']) then
+    if (Length(DriveLetter) <> 1) or not ((DriveLetter[1] >= 'A') and (DriveLetter[1] <= 'Z')) then
     begin
       MsgBox('Invalid drive letter: ' + DriveLetter + #13#10 + 'Please use a single alphabet character (A-Z).', mbError, MB_OK);
       // Ideally, prevent moving from wizard page with invalid input.
