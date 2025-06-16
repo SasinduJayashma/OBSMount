@@ -148,7 +148,7 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   IniPath, RcloneCfgPath: String;
-  DriveLetter, BucketName, Region, Endpoint, Ak, Sk, RcPortStr, PermissionsSetting: String;
+  DriveLetter, BucketName, Region, Endpoint, Ak, Sk, RcPortStr, PermissionsSetting, CmdParams: String;
   RcPort: Integer;
   VbsPath, LnkBasePath, LnkName: String;
   ErrorCode: Integer;
@@ -196,8 +196,8 @@ begin
     else
       PermissionsSetting := 'readonly';
 
-    Log(Fmt('Saving configuration for Profile %s to %s', [DriveLetter, IniPath]));
-    Log(Fmt('Bucket: %s, Region: %s, Endpoint: %s, Drive: %s, RC Port: %s, Permissions: %s', [BucketName, Region, Endpoint, DriveLetter, RcPortStr, PermissionsSetting]));
+    Log('Saving configuration for Profile ' + DriveLetter + ' to ' + IniPath);
+    Log('Bucket: ' + BucketName + ', Region: ' + Region + ', Endpoint: ' + Endpoint + ', Drive: ' + DriveLetter + ', RC Port: ' + RcPortStr + ', Permissions: ' + PermissionsSetting);
 
     SaveStringToFile(IniPath,
       '; OBS Configuration for Drive ' + DriveLetter + #13#10 +
@@ -211,7 +211,7 @@ begin
       'permissions='+ PermissionsSetting + #13#10,
       False);
 
-    Log(Fmt('Saving rclone config for Profile %s to %s', [DriveLetter, RcloneCfgPath]));
+    Log('Saving rclone config for Profile ' + DriveLetter + ' to ' + RcloneCfgPath);
     SaveStringToFile(RcloneCfgPath,
       '[huaweiOBS]' #13#10 + // Can keep this section name static as file is unique
       'type = s3' #13#10 +
@@ -227,16 +227,17 @@ begin
     LnkBasePath := ExpandConstant('{userstartup}\OBS Drive Mount ('); // Note the opening parenthesis
     LnkName := LnkBasePath + DriveLetter + ').lnk'; // e.g., OBS Drive Mount (Q).lnk
     
-    Log(Fmt('Creating startup shortcut: %s for drive %s', [LnkName, DriveLetter]));
-    Exec(ExpandConstant('{app}\CreateShortcut.exe'), Fmt('"%s" "%s" "%s" "%s"', [LnkName, VbsPath, DriveLetter, ExpandConstant('{app}')]), '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
+    Log('Creating startup shortcut: ' + LnkName + ' for drive ' + DriveLetter);
+    CmdParams := '"' + LnkName + '" "' + VbsPath + '" "' + DriveLetter + '" "' + ExpandConstant('{app}') + '"';
+    Exec(ExpandConstant('{app}\CreateShortcut.exe'), CmdParams, '', SW_HIDE, ewWaitUntilTerminated, ErrorCode);
     if ErrorCode <> 0 then
     begin
-      Log(Fmt('Error creating shortcut via CreateShortcut.exe for drive %s. Error code: %d', [DriveLetter, ErrorCode]));
-      MsgBox(Fmt('Failed to create startup shortcut for drive %s. Please check logs for details.', [DriveLetter]), mbError, MB_OK);
+      Log('Error creating shortcut via CreateShortcut.exe for drive ' + DriveLetter + '. Error code: ' + IntToStr(ErrorCode));
+      MsgBox('Failed to create startup shortcut for drive ' + DriveLetter + '. Please check logs for details.', mbError, MB_OK);
     end
     else
     begin
-      Log(Fmt('Successfully requested shortcut creation for drive %s via CreateShortcut.exe.', [DriveLetter]));
+      Log('Successfully requested shortcut creation for drive ' + DriveLetter + ' via CreateShortcut.exe.');
     end;
 
     // Optionally, run the newly configured mount instance immediately
@@ -245,10 +246,10 @@ begin
               'Do you want to start this mount now?' #13#10 +
               '(It will also start automatically on next login).', mbConfirmation, MB_YESNO) = IDYES then
     begin
-        Log(Fmt('Attempting to start mount for drive %s post-install.', [DriveLetter]));
+        Log('Attempting to start mount for drive ' + DriveLetter + ' post-install.');
         if not Exec(VbsPath, DriveLetter, ExpandConstant('{app}'), SW_HIDE, ewNoWait, ErrorCode) then
         begin
-            Log(Fmt('Error starting mount for drive %s post-install. Code: %d', [DriveLetter, ErrorCode]));
+            Log('Error starting mount for drive ' + DriveLetter + ' post-install. Code: ' + IntToStr(ErrorCode));
         end;
     end;
   end;
